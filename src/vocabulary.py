@@ -1,5 +1,6 @@
 import re
 from enum import StrEnum
+import tiktoken
 
 class SpecialTokens(StrEnum):
     EOT = "<|endOfText|>"
@@ -9,6 +10,7 @@ class SpecialTokens(StrEnum):
 # Throw an error when decode unknown words!
 class Vocabulary:
     def __init__(self, data: str):
+        tokenizer = tiktoken.get_encoding("gpt2")
         tokens = self.__tokenize(data)
 
         # Creating token IDs
