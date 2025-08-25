@@ -1,36 +1,24 @@
-import tiktoken
-from src.tokenizer import Tokenizer
-from src.vocabulary import SpecialTokens, Vocabulary
+from src.gpt_dataset import create_dataloader_v1
 
 with open("./data/the-verdict.txt", "r", encoding="utf-8") as file:
     raw_text = file.read()
 
-# test
-print("Total number of character:", len(raw_text))
-print(raw_text[:99])  # Print first 100 characters
+# Create Input-Target pairs
+CONTEXT_SIZE = 4 # Length of the input context
+# The CONTEXT_SIZE of 4 means that the model is trained to look at a sequence of 4 words (or tokens)
+# to predict the next word (token) in the sequence.
+# The input sequence (x) consists of the first 4 tokens, while the target sequence (y) consists of the next 4 tokens
+# shifted by one.
 
-# vocabulary = Vocabulary(raw_text)
-# # test
-# PRINT_PAIRS = 20
-# for i, item in enumerate(vocabulary.tokens().items()):
-#     print(item, end=", ")
-    
-#     if i >= PRINT_PAIRS:
-#         break
-# print("")
+# Example:
+# Input (x): [4, 56, 19, 99]
+# Target (y): [56, 19, 99, 801]
 
-# print(f"Last {PRINT_PAIRS} token pairs: {list(vocabulary.tokens().items())[-PRINT_PAIRS:]}")
-# print("Vocabulary size: ", vocabulary.size())
-
-tokenizer = tiktoken.get_encoding("gpt2")
+# Implement a Data Loader
+dataloader = create_dataloader_v1(raw_text, batch_size=CONTEXT_SIZE * 2, max_length=CONTEXT_SIZE, stride=CONTEXT_SIZE, shuffle=False)
 
 # test
-text1 = "Hello, do you like tea?"
-text2 = "In the sunlit terraces of the palace."
-text = f"{SpecialTokens.EOT.value} ".join((text1, text2))
-print("Original text:", text)
-ids = tokenizer.encode(text, allowed_special={SpecialTokens.EOT.value})
-print(ids)
-
-decoded_text = tokenizer.decode(ids)
-print(decoded_text)
+data_iter = iter(dataloader)
+inputs, targets = next(data_iter)
+print("Inputs:\n", inputs)
+print("Targets:\n", targets)

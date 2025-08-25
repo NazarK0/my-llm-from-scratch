@@ -6,9 +6,11 @@ authors = [
     {name = "NazarK0",email = "vanivskyi.dev@gmail.com"}
 ]
 readme = "README.md"
-requires-python = ">=3.13"
+requires-python = ">=3.13,<3.14"
 dependencies = [
-    "tiktoken (>=0.11.0,<0.12.0)"
+    "tiktoken (>=0.11.0,<0.12.0)",
+    "torch (>=2.8.0,<3.0.0)",
+    "numpy (>=2.3.2,<3.0.0)"
 ]
 
 
