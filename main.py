@@ -19,7 +19,7 @@ EMBEDDINGS_SEED = 123
 with open("./data/the-verdict.txt", "r", encoding="utf-8") as file:
     raw_text = file.read()
 
-# Create Input-Target pairs
+# Data preparation
 ## Implement a Data Loader
 dataloader = create_dataloader_v1(raw_text, batch_size=CONTEXT_SIZE * 2, max_length=CONTEXT_SIZE, stride=CONTEXT_SIZE, shuffle=False)
 
@@ -34,3 +34,6 @@ token_embeddings = token_embedding_layer(inputs)
 ## Create positional embeddings
 positional_embedding_layer = torch.nn.Embedding(CONTEXT_SIZE, EMBEDDING_DIMENSIONS)
 positional_embeddings = positional_embedding_layer(torch.arange(CONTEXT_SIZE))
+
+## Input embeddings
+input_embeddings = token_embeddings + positional_embeddings
