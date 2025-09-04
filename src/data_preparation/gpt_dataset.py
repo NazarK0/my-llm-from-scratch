@@ -1,7 +1,7 @@
 import tiktoken
 import torch
 from torch.utils.data import Dataset, DataLoader
-from src.special_tokens import SpecialTokens
+from src.data_preparation.special_tokens import SpecialTokens
 
 
 class GPTDatasetV1(Dataset):

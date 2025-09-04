@@ -1,5 +1,5 @@
 import torch
-from src.gpt_dataset import create_dataloader_v1
+from src.data_preparation.gpt_dataset import create_dataloader_v1
 
 
 # The CONTEXT_SIZE of 4 means that the model is trained to look at a sequence of 4 words (or tokens)
