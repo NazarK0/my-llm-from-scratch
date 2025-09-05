@@ -3,9 +3,9 @@ import torch.nn as nn
 
 
 # Implement a class SelfAttention
-class SelfAttention2(nn.Module):
+class SelfAttention(nn.Module):
     def __init__(self, d_in, d_out, qkv_bias=False):
-        super(SelfAttention2, self).__init__()
+        super(SelfAttention, self).__init__()
         self.weight_query = nn.Linear(d_in, d_out, bias=qkv_bias)
         self.weight_key = nn.Linear(d_in, d_out, bias=qkv_bias)
         self.weight_value = nn.Linear(d_in, d_out, bias=qkv_bias)
