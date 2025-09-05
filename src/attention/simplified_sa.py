@@ -16,40 +16,11 @@ inputs = torch.tensor([
 
 # 1. Compute attention scores (dot products)
 attention_scores = torch.empty(6, 6)
-
-## Naive implementation. For loops very slow for large tensors
-# for i, x_i in enumerate(inputs):
-#     for j, x_j in enumerate(inputs):
-#         attention_scores[i, j] = torch.dot(x_i, x_j)
-## test
-# print("Attention Scores For loop:")
-# print(attention_scores)
-
-## Matrix multiplication implementation
-# attention_scores = torch.matmul(inputs, inputs.T)
-## test
-# print("Attention Scores Matrix:")
-# print(attention_scores)
-
-## Matrix multiplication syntactic sugar
 attention_scores = inputs @ inputs.T
-
-# test
-print("Attention Scores Syntactic Sugar:")
-print(attention_scores)
 
 # 2. Compute attention weights (softmax)
 attention_weights = torch.softmax(attention_scores, dim=-1)
 
-# test
-print("Attention Weights:")
-print(attention_weights)
-print("Sum of Attention Weights (should be 1.0 for each row):")
-print(attention_weights.sum(dim=-1))
-
 # 3. Compute context vectors (weighted sums)
 # (6x6 @ 6x3 = 6x3)
 context = attention_weights @ inputs # The same as torch.matmul(attention_weights, inputs) 
-
-print("Context Vectors:")
-print(context)
