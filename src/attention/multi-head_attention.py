@@ -1,8 +1,5 @@
 from torch import (
     tensor,
-    cat,
-    stack,
-    manual_seed,
     triu,
     ones,
     sqrt,
@@ -11,29 +8,12 @@ from torch import (
     float32,
 )
 from torch.nn import Module, Linear, Dropout
-from causal_attention import CausalAttention
-from torch.nn import ModuleList
 
 
 # A Multi-Head Attention implementation with dropout
-# This class creates multiple instances of CausalAttention and concatenates their outputs sequentially.
+# This class creates multiple instances of CausalAttention and concatenates their outputs in parallel.
 # Each head processes the same input independently, allowing the model to capture diverse aspects of the input data.
-class MultiHeadAttentionSimple(Module):
-    def __init__(self, d_in, d_out, context_length, heads, dropout_rate=0.0, qkv_bias=False):
-        super(MultiHeadAttentionSimple, self).__init__()
-        assert (
-            d_out % heads == 0
-        ), "d_out must be divisible by heads"
 
-        self.heads = ModuleList(
-            [CausalAttention(d_in, d_out, context_length, dropout_rate, qkv_bias) for _ in range(heads)]
-        )
-
-    # Final output is the concatenation of all head outputs
-    def forward(self, inputs):
-        return cat([head(inputs) for head in self.heads], dim=-1)
-    
-    
 class MultiHeadAttention(Module):
     def __init__(self, d_in, d_out, context_length, heads, dropout_rate=0.0, qkv_bias=False):
         super(MultiHeadAttention, self).__init__()
@@ -90,56 +70,3 @@ class MultiHeadAttention(Module):
         context = self.out_projection(context)
 
         return context
-
-
-# Test the Multi-Head Attention implementation
-words = ["Your", "journey", "starts", "with", "one", "step"]
-inputs = tensor(
-    [
-        [0.43, 0.15, 0.89],  # Your
-        [0.55, 0.87, 0.66],  # journey
-        [0.57, 0.85, 0.64],  # starts
-        [0.22, 0.58, 0.33],  # with
-        [0.77, 0.25, 0.10],  # one
-        [0.05, 0.80, 0.55],  # step
-    ]
-)
-
-# Dimensions
-# the embedding dimension, 3 in this case
-d_in = inputs.shape[1]
-# the output dimension, typically larger than the input dimension,
-# or the same as in GPT models, here we use 2 for simplicity
-d_out = 2
-
-batch = stack((inputs, inputs), dim=0)  # Create a batch of 2 identical sequences
-
-manual_seed(123)  # For reproducibility
-context_length = batch.shape[1]  # 6 tokens in the input sequence
-
-attention  =  MultiHeadAttentionSimple(d_in, d_out, context_length, heads=2)
-context = attention(batch)
-print("Input shape:", batch.shape)  # (2, 6, 3)
-print("Context shape:", context.shape)  # (2, 6, 4)
-print("Context:\n", context)
-
-
-
-# Test2
-
-manual_seed(123)  # For reproducibility
-inputs2 = tensor(
-    [[0.43, 0.15, 0.89, 0.55, 0.87, 0.66],
-     [0.57, 0.85, 0.64, 0.22, 0.58, 0.33],
-     [0.77, 0.25, 0.10, 0.05, 0.80, 0.55]]
-)
-batch2 = stack((inputs2, inputs2), dim=0)
-
-batch_size, context_length, d_in = batch2.shape
-D_OUT = 6
-HEADS = 2
-attention2 = MultiHeadAttention(d_in, D_OUT, context_length, heads=HEADS)
-context2 = attention2(batch2)
-print("Input2 shape:", batch2.shape)  # (2, 3, 6)
-print("Context2 shape:", context2.shape)  # (2, 3, 6)
-print("Context2:\n", context2)  
