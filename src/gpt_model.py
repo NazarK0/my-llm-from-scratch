@@ -58,20 +58,3 @@ class GPTModel(nn.Module):
 
         return logits
     
-
-
-torch.manual_seed(123)
-batch = torch.tensor([
-    [6109, 3626, 6100, 345],
-    [6109, 1110, 6622, 257]
-])
-model_163M = GPTModel(GPT_CONFIG_163M)
-out = model_163M(batch)
-total_params = sum(p.numel() for p in model_163M.parameters() if p.requires_grad)
-total_size_bytes = total_params * 4  # Assuming 4 bytes per parameter (float32)
-total_size_mb = total_size_bytes / (1024 ** 2)
-print("Input batch:\n", batch)
-print("\nOptput shape:", out.shape)  # Should be (2, 4, 50257)
-print("Output logits:\n", out)
-print(f"\nTotal trainable parameters: {total_params:,}")
-print(f"Total size in memory (MB): {total_size_mb:.2f} MB")
