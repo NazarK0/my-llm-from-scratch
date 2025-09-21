@@ -1,8 +1,8 @@
 import torch
 import torch.nn as nn
-from attention.multi_head_attention import MultiHeadAttention
-from dummy_gpt import FeedForwardNetwork
-from dummy_gpt import LayerNormalization
+from llm.multi_head_attention import MultiHeadAttention
+from llm.feed_forward_network import FeedForwardNetwork
+from llm.layer_normalization import LayerNormalization
 
 
 GPT_CONFIG_124M = {
