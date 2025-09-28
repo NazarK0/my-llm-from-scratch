@@ -1,8 +1,8 @@
-import torch
 import torch.nn as nn
-from llm.multi_head_attention import MultiHeadAttention
-from llm.feed_forward_network import FeedForwardNetwork
-from llm.layer_normalization import LayerNormalization
+
+from src.llm.multi_head_attention import MultiHeadAttention
+from src.llm.feed_forward_network import FeedForwardNetwork
+from src.llm.layer_normalization import LayerNormalization
 
 
 GPT_CONFIG_124M = {
@@ -49,12 +49,3 @@ class TransformerBlock(nn.Module):
         x = x + shortcut  # Residual connection
 
         return x
-    
-# Example usage:
-torch.manual_seed(123)
-x = torch.rand(2, 4, 768)  # Example input tensor with shape (batch_size, sequence_length, embedding_dimension)
-transformer_block = TransformerBlock(GPT_CONFIG_124M)
-output = transformer_block(x)
-print(x.shape)
-print(output.shape)  # Should be the same shape as input
-        

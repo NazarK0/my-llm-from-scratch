@@ -1,8 +1,4 @@
 import torch
-import tiktoken
-
-from gpt_model import GPTModel, GPT_CONFIG_163M
-
 
 def generate_text_simple(model, idx, max_new_tokens, context_size):
     """
@@ -38,24 +34,3 @@ def generate_text_simple(model, idx, max_new_tokens, context_size):
         idx = torch.cat((idx, next_token), dim=1)  # Shape: (batch_size, sequence_length + 1)
 
     return idx
-
-# Example usage:
-tokenizer = tiktoken.get_encoding("gpt2")
-start_context = "Hello, I am"
-encoded = tokenizer.encode(start_context)
-encoded_tensor = torch.tensor(encoded).unsqueeze(0)  # Shape: (1, sequence_length)
-print("Encoded:", encoded)
-print("Encoded tensor shape:", encoded_tensor.shape)
-
-model_163M = GPTModel(GPT_CONFIG_163M)
-model_163M.eval()  # Set the model to evaluation mode
-out = generate_text_simple(
-    model_163M, encoded_tensor, 
-    max_new_tokens=6, 
-    context_size=GPT_CONFIG_163M["context_length"]
-    )
-print("Output:", out)
-print("Output length:", len(out[0]))
-
-decoded_text = tokenizer.decode(out[0].tolist())
-print("Decoded text:", decoded_text)

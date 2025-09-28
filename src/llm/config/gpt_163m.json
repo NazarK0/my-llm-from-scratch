@@ -1,0 +1,9 @@
+{
+    "vocabulary_size": 50257,
+    "context_length": 1024,
+    "embedding_dimension": 768,
+    "number_of_layers": 12,
+    "number_of_heads": 12,
+    "dropout_rate": 0.1,
+    "qkv_bias": false
+}

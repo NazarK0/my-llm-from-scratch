@@ -1,5 +1,5 @@
 import torch.nn as nn
-from llm.gelu import GeLU
+from src.llm.gelu import GeLU
 
 
 # Feed-Forward Network (FFN) used in Transformer blocks

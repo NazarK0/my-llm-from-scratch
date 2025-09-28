@@ -1,18 +1,9 @@
 import torch
 import torch.nn as nn
-from llm.layer_normalization import LayerNormalization
-from transformer_block import TransformerBlock
 
+from src.llm.layer_normalization import LayerNormalization
+from src.llm.transformer_block import TransformerBlock
 
-GPT_CONFIG_163M = {
-    "vocabulary_size": 50257,
-    "context_length": 1024,
-    "embedding_dimension": 768,
-    "number_of_layers": 12,
-    "number_of_heads": 12,
-    "dropout_rate": 0.1,
-    "qkv_bias": False,
-}
 
 # GPT-2 architecture model
 class GPTModel(nn.Module):
