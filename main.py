@@ -100,7 +100,7 @@ num_epochs = 10
 
 train_losses, validation_losses, tokens_seen = train_model_simple(
     model, train_loader, validation_loader, optimizer, device, num_epochs,
-    evaluation_frquency=5, evaluation_steps=5, start_context="Every effort moves you", tokenizer=tokenizer
+    evaluation_frequency=5, evaluation_steps=5, start_context="Every effort moves you", tokenizer=tokenizer
 )
 
 end_time = time.time()
