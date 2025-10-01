@@ -1,6 +1,6 @@
 import torch
 
-def text_to_tokedIds(text, tokenizer):
+def text_to_tokenIds(text, tokenizer):
     """
     Convert text to token IDs using the specified tokenizer.
 

@@ -1,74 +1,108 @@
 import torch
 import tiktoken
+import os
+import time
 
+from src.data_preparation.gpt_dataset import create_dataloader
 from src.llm.config.loader import config_loader
-from src.utils.convert import tokenIds_to_text
 from src.llm.gpt_model import GPTModel
-from src.utils.loss_fn import cross_entropy_loss, perplexity_loss
+from src.utils.host import get_cpu_cores, get_device
+from src.utils.loss_fn import loader_loss
+from src.utils.train import train_model_simple
 
-gpt_config_163m = config_loader("src/llm/config/gpt_163m.json")
-print("GPT 163M Config:", gpt_config_163m)
-torch.manual_seed(123)
-model = GPTModel(gpt_config_163m)
-model.eval()  # Set the model to evaluation mode to disable dropout
+
+device = get_device()
+TASKS: int = 0
+if device.type == "cpu":
+    cores = get_cpu_cores() # for DataLoader
+    tasks_per_core = 8
+    TASKS = cores * tasks_per_core
+    print(f"Using {cores} CPU cores for DataLoader and {tasks_per_core} tasks per core")
 
 tokenizer = tiktoken.get_encoding("gpt2")
+gpt_config_163m = config_loader("src/llm/config/gpt_163m.json")
+file_path = os.path.join("data", "the-verdict.txt")
 
-# Example input (batch of 2 sequences, each of length 3)
-inputs = torch.tensor([
-    [16833, 3626, 6100], # Every effort moves
-    [40, 1107,588]       # I really like
-    ])
+with open(file_path, "r", encoding="utf-8") as file:
+    text = file.read()
 
-targets = torch.tensor([
-    [3626, 6100, 345],  # effort moves you
-    [1107, 588, 11311]  # really like chocolate
-    ])
+total_tokens = len(tokenizer.encode(text))
+print("First 50 characters of the text:", text[:50])
+print("Total characters:", len(text))
+print("Total tokens in the text:", total_tokens)
+
+train_ratio = 0.9
+split_idx = int(train_ratio * len(text))
+train_data = text[:split_idx]
+validation_data = text[split_idx:]
+
+torch.manual_seed(123)
+
+train_loader = create_dataloader(
+    train_data,
+    batch_size=2,
+    max_length=gpt_config_163m["context_length"],
+    stride=gpt_config_163m["context_length"],
+    num_workers=TASKS,
+)
+validation_loader = create_dataloader(
+    validation_data,
+    batch_size=2,
+    max_length=gpt_config_163m["context_length"],
+    stride=gpt_config_163m["context_length"],
+    drop_last=False,
+    shuffle=False,
+    num_workers=TASKS,
+)
+
+# Sanity check: Decode the first batch of input_ids and target_ids
+if total_tokens * train_ratio < gpt_config_163m["context_length"]:
+    print("Warning: The training data is smaller than the context length. "
+        "Adjust the context length or provide more data.")
+
+if total_tokens * (1 - train_ratio) < gpt_config_163m["context_length"]:
+    print("Warning: The validation data is smaller than the context length. "
+        "Adjust the context length or provide more data.")
 
 
-# Cross entropy loss ( must be close to 0.0 since we are using argmax )
+print("Train loader")
+for x, y in train_loader:
+    print(f"x shape: {x.shape}, y shape: {y.shape}")
 
-# Step by step approach to compute the approximation of cross-entropy loss
-# 1. Get the logits from the model
-# 2. Convert logits to probabilities using softmax
-# 3. Get the probabilities of the target tokens
-# 4. Compute the average probability for each token
-# 5. Compute negative average log probability as loss
+print("\nValidation loader")
+for x, y in validation_loader:
+    print(f"x shape: {x.shape}, y shape: {y.shape}")
+
+print(len(train_loader))
+
+model = GPTModel(gpt_config_163m)
+model.eval()  # Set the model to evaluation mode to disable dropout
+model.to(device)
+
+torch.manual_seed(123)
 with torch.no_grad():
-    logits = model(inputs)
+    train_loss = loader_loss(train_loader, model, device)
+    validation_loss = loader_loss(validation_loader, model, device)
 
-    probabilities = torch.softmax(logits, dim=-1) # Convert logits to probabilities
-    print("Probabilities shape:", probabilities.shape)  # Should be (batch_size, sequence_length, vocab_size)
-
-token_ids = torch.argmax(probabilities, dim=-1, keepdim=True)  # Get the token IDs with the highest probability
-print("Token Ids:", token_ids)
-print(f"Target (batch #1): {tokenIds_to_text(targets[0], tokenizer)}")
-print(f"Output (batch #1): {tokenIds_to_text(token_ids[0].flatten(0), tokenizer)}")
+print(f"Train Loss: {train_loss}")
+print(f"Validation Loss: {validation_loss}")
 
 
-text_idx_0 = 0
-target_probabilities_0 = probabilities[text_idx_0, [0, 1, 2], targets[text_idx_0]]
-print("Target Probabilities idx[0]:", target_probabilities_0)
+start_time = time.time()
 
-text_idx_1 = 1
-target_probabilities_1 = probabilities[text_idx_1, [0, 1, 2], targets[text_idx_1]]
-print("Target Probabilities idx[1]:", target_probabilities_1)
+torch.manual_seed(123)
+model = GPTModel(gpt_config_163m)
+model.to(device)
 
-log_probabilities = torch.log(torch.cat((target_probabilities_0, target_probabilities_1)))
-print("Log Probabilities:", log_probabilities)
+optimizer = torch.optim.AdamW(model.parameters(), lr=0.0004, weight_decay=0.1)
 
-# Compute the average probability for each token
-average_log_probability = torch.mean(log_probabilities)
-print("Average Log Probability:", average_log_probability.item())
+num_epochs = 10
 
-# Compute negative average log probability as loss
-negative_average_log_probability = -average_log_probability
-print("Negative Average Log Probability (Loss):", negative_average_log_probability.item())
+train_losses, validation_losses, tokens_seen = train_model_simple(
+    model, train_loader, validation_loader, optimizer, device, num_epochs,
+    evaluation_frquency=5, evaluation_steps=5, start_context="Every effort moves you", tokenizer=tokenizer
+)
 
-
-# Using the implemented loss functions
-loss = cross_entropy_loss(logits, targets)
-print("Cross Entropy Loss:", loss)
-
-perplexity = perplexity_loss(logits, targets)
-print("Perplexity:", perplexity)
+end_time = time.time()
+exec_time_minutes = (end_time - start_time) / 60
+print(f"Training completed in {exec_time_minutes:.2f} minutes")
