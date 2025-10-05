@@ -15,7 +15,7 @@ device = get_device()
 TASKS: int = 0
 if device.type == "cpu":
     cores = get_cpu_cores() # for DataLoader
-    tasks_per_core = 8
+    tasks_per_core = 1
     TASKS = cores * tasks_per_core
     print(f"Using {cores} CPU cores for DataLoader and {tasks_per_core} tasks per core")
 

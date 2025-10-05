@@ -41,7 +41,7 @@ def train_model_simple(model, train_loader, validation_loader,
                     f"Train Loss: {train_loss:.4f}, Validation Loss: {validation_loss:.4f}, "
                     f"Tokens Seen: {tokens_seen}")
         
-        generate_and_print_sample(model, tokenizer, start_context)
+        generate_and_print_sample(model, tokenizer, device, start_context)
     return train_losses, validation_losses, track_tokens_seen
         
         
@@ -60,7 +60,7 @@ def evaluate_model(model, train_loader, validation_loader, device, evaluation_st
 def generate_and_print_sample(model, tokenizer, device, start_context):
     model.eval()  # Set the model to evaluation mode to disable dropout
     
-    context_size = model.positional_embedding.weights.shape[0]
+    context_size = model.position_embedding.weight.shape[0]
     encoded = text_to_tokenIds(start_context, tokenizer).to(device)
     
     with torch.no_grad():
