@@ -2,6 +2,7 @@ import torch
 import tiktoken
 import os
 import time
+from datetime import datetime
 
 from src.data_preparation.gpt_dataset import create_dataloader
 from src.llm.config.loader import config_loader
@@ -10,19 +11,25 @@ from src.utils.host import get_cpu_cores, get_device
 from src.utils.loss_fn import loader_loss
 from src.utils.train import train_model_simple
 
+tokenizer = tiktoken.get_encoding("gpt2")
+gpt_config_163m = config_loader("src/llm/config/gpt_163m.json")
+file_path = os.path.join("data", "the-verdict.txt")
+
+# If not exists, create directory for saving the model weights and optimizer state
+model_save_path = os.path.join("model", f"gpt_163m-{datetime.now().strftime("%d.%m.%Y")}.pth")
+os.makedirs(os.path.dirname(model_save_path), exist_ok=True)
+
 
 device = get_device()
 TASKS: int = 0
+
 if device.type == "cpu":
     cores = get_cpu_cores() # for DataLoader
     tasks_per_core = 1
     TASKS = cores * tasks_per_core
     print(f"Using {cores} CPU cores for DataLoader and {tasks_per_core} tasks per core")
 
-tokenizer = tiktoken.get_encoding("gpt2")
-gpt_config_163m = config_loader("src/llm/config/gpt_163m.json")
-file_path = os.path.join("data", "the-verdict.txt")
-
+# Read data
 with open(file_path, "r", encoding="utf-8") as file:
     text = file.read()
 
@@ -65,16 +72,6 @@ if total_tokens * (1 - train_ratio) < gpt_config_163m["context_length"]:
         "Adjust the context length or provide more data.")
 
 
-print("Train loader")
-for x, y in train_loader:
-    print(f"x shape: {x.shape}, y shape: {y.shape}")
-
-print("\nValidation loader")
-for x, y in validation_loader:
-    print(f"x shape: {x.shape}, y shape: {y.shape}")
-
-print(len(train_loader))
-
 model = GPTModel(gpt_config_163m)
 model.eval()  # Set the model to evaluation mode to disable dropout
 model.to(device)
@@ -89,12 +86,28 @@ print(f"Validation Loss: {validation_loss}")
 
 
 start_time = time.time()
-
-torch.manual_seed(123)
-model = GPTModel(gpt_config_163m)
-model.to(device)
-
 optimizer = torch.optim.AdamW(model.parameters(), lr=0.0004, weight_decay=0.1)
+
+# Load the model if it exists, otherwise initialize a new model
+if os.path.exists(model_save_path):
+    print("Loading the model...")
+    
+    checkpoint = torch.load(model_save_path, map_location=device)
+    model = GPTModel(gpt_config_163m)
+    model.load_state_dict(checkpoint['model_state_dict'])
+    model.to(device)
+    model.eval()
+    optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+    model.train()
+    
+    print("Model loaded successfully.")
+else:
+    print("No saved model found, proceeding to train a new model.")
+    
+    torch.manual_seed(123)
+    model = GPTModel(gpt_config_163m)
+    model.to(device)
+
 
 num_epochs = 10
 
@@ -106,3 +119,9 @@ train_losses, validation_losses, tokens_seen = train_model_simple(
 end_time = time.time()
 exec_time_minutes = (end_time - start_time) / 60
 print(f"Training completed in {exec_time_minutes:.2f} minutes")
+
+print("Saving the model...")
+torch.save({
+    'model_state_dict': model.state_dict(),
+    'optimizer_state_dict': optimizer.state_dict(),
+    }, model_save_path)
