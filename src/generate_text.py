@@ -72,7 +72,7 @@ def generate_text(model, idx, max_new_tokens, context_size, temperature=1.0,  to
             
             # Focus on the last time step's logits
             logits = logits[:, -1] 
-            logits = torch.where(logits < min_value, torch.tensor( float('-inf')).to(logits.device), logits)
+            logits = torch.where(logits < min_value, torch.tensor(float('-inf')).to(logits.device), logits)
         
         # Apply temperature scaling
         # Temperature scaling adjusts the "confidence" of the model's predictions
