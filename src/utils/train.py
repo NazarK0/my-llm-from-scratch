@@ -1,5 +1,5 @@
 import torch
-from src.generate_text import generate_text_simple
+from src.generate_text import generate_text
 from src.utils.convert import text_to_tokenIds, tokenIds_to_text
 from src.utils.loss_fn import batch_loss, loader_loss
 
@@ -64,7 +64,8 @@ def generate_and_print_sample(model, tokenizer, device, start_context):
     encoded = text_to_tokenIds(start_context, tokenizer).to(device)
     
     with torch.no_grad():
-        token_ids = generate_text_simple(model=model, idx=encoded, max_new_tokens=50, context_size=context_size)
+        torch.manual_seed(123)
+        token_ids = generate_text(model=model, idx=encoded, max_new_tokens=50, context_size=context_size, top_k=25, temperature=1.4)
         
     decoded_text = tokenIds_to_text(token_ids, tokenizer) 
     
