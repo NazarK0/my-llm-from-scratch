@@ -29,7 +29,7 @@ class GPTModel(nn.Module):
         )
 
     def forward(self, input_tokens):
-        batch_size, sequence_length = input_tokens.shape
+        _, sequence_length = input_tokens.shape
 
         # Token and position embeddings
         token_embeddings = self.token_embedding(input_tokens)
