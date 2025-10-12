@@ -28,7 +28,7 @@ class GPTDataset(Dataset):
         return len(self.input_ids)
 
     def __getitem__(self, idx):
-        os.system("taskset -p 0x3f %d" % os.getpid())
+        # os.system("taskset -p 0x3f %d" % os.getpid())
         return self.input_ids[idx], self.target_ids[idx]
 
 
