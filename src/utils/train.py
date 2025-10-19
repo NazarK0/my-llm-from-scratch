@@ -40,7 +40,7 @@ def train_model_simple(model, train_loader, validation_loader,
                 print(f"Epoch [{epoch+1}/{num_epochs}], Step [{global_step}], "
                     f"Train Loss: {train_loss:.4f}, Validation Loss: {validation_loss:.4f}, "
                     f"Tokens Seen: {tokens_seen}")
-        
+
         generate_and_print_sample(model, tokenizer, device, start_context)
     return train_losses, validation_losses, track_tokens_seen
         
