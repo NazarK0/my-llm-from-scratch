@@ -15,6 +15,7 @@ def train_model_simple(model, train_loader, validation_loader,
     global_step = -1
     
     # Main training loop
+    # TODO: make parallel training
     for epoch in range(num_epochs):
         model.train() # Set the model to training mode
         
