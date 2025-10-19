@@ -71,7 +71,6 @@ def generate_text(model, idx, max_new_tokens, context_size, temperature=1.0,  to
             min_value = top_logits[:,-1]
             
             # Focus on the last time step's logits
-            logits = logits[:, -1] 
             logits = torch.where(logits < min_value, torch.tensor(float('-inf')).to(logits.device), logits)
         
         # Apply temperature scaling
