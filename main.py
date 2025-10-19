@@ -9,8 +9,8 @@ from src.llm.config.loader import config_loader
 from src.llm.gpt_model import GPTModel
 from src.utils.host import get_cpu_cores, get_device
 from src.utils.loss_fn import loader_loss
-from src.utils.train import train_model_simple
-from torch.profiler import profile, ProfilerActivity, record_function
+from src.utils.train import train_model
+
 
 tokenizer = tiktoken.get_encoding("gpt2")
 gpt_config_163m = config_loader("src/llm/config/gpt_163m.json")
@@ -45,35 +45,27 @@ if __name__ == '__main__':
     train_data = text[:split_idx]
     validation_data = text[split_idx:]
 
-    with profile(activities=[ProfilerActivity.CPU], record_shapes=True) as prof:
-        with record_function("Train_loader"):
-            torch.manual_seed(123)
-            train_loader = create_dataloader(
-                tokenizer,
-                train_data,
-                batch_size=2,
-                max_length=gpt_config_163m["context_length"],
-                stride=gpt_config_163m["context_length"],
-                shuffle=False,
-                num_workers=TASKS,
-            )
-    print("+++++++++++++++++++++++++++ Train Loader Profiling +++++++++++++++++++++++++++")
-    print(prof.key_averages().table(sort_by="cpu_time_total", row_limit=10))
+    torch.manual_seed(123)
+    train_loader = create_dataloader(
+        tokenizer,
+        train_data,
+        batch_size=2,
+        max_length=gpt_config_163m["context_length"],
+        stride=gpt_config_163m["context_length"],
+        shuffle=False,
+        num_workers=TASKS,
+    )
 
-    with profile(activities=[ProfilerActivity.CPU], record_shapes=True) as prof:
-        with record_function("Validation_loader"):
-            validation_loader = create_dataloader(
-                tokenizer,
-                validation_data,
-                batch_size=2,
-                max_length=gpt_config_163m["context_length"],
-                stride=gpt_config_163m["context_length"],
-                drop_last=False,
-                shuffle=False,
-                num_workers=TASKS,
-            )
-    print("+++++++++++++++++++++++++++ Validation Loader Profiling +++++++++++++++++++++++++++")
-    print(prof.key_averages().table(sort_by="cpu_time_total", row_limit=10))
+    validation_loader = create_dataloader(
+        tokenizer,
+        validation_data,
+        batch_size=2,
+        max_length=gpt_config_163m["context_length"],
+        stride=gpt_config_163m["context_length"],
+        drop_last=False,
+        shuffle=False,
+        num_workers=TASKS,
+    )
 
     # Sanity check: Decode the first batch of input_ids and target_ids
     if total_tokens * train_ratio < gpt_config_163m["context_length"]:
@@ -88,18 +80,14 @@ if __name__ == '__main__':
     model.eval()  # Set the model to evaluation mode to disable dropout
     model.to(device)
 
-    with profile(activities=[ProfilerActivity.CPU], record_shapes=True) as prof:
-        with record_function("Compute_Loss"):
-            torch.manual_seed(123)
-            with torch.no_grad():
-                train_loss = loader_loss(train_loader, model, device)
-                validation_loss = loader_loss(validation_loader, model, device)
 
-            print(f"Train Loss: {train_loss}")
-            print(f"Validation Loss: {validation_loss}")
+    torch.manual_seed(123)
+    with torch.no_grad():
+        train_loss = loader_loss(train_loader, model, device)
+        validation_loss = loader_loss(validation_loader, model, device)
 
-    print("+++++++++++++++++++++++++++ Loss Computation Profiling +++++++++++++++++++++++++++")
-    print(prof.key_averages().table(sort_by="cpu_time_total", row_limit=10))
+    print(f"Train Loss: {train_loss}")
+    print(f"Validation Loss: {validation_loss}")
 
     start_time = time.time()
     optimizer = torch.optim.AdamW(model.parameters(), lr=0.0004, weight_decay=0.1)
@@ -126,7 +114,7 @@ if __name__ == '__main__':
 
     num_epochs = 10
 
-    train_losses, validation_losses, tokens_seen = train_model_simple(
+    train_losses, validation_losses, tokens_seen = train_model(
         model, train_loader, validation_loader, optimizer, device, num_epochs,
         evaluation_frequency=5, evaluation_steps=5, start_context="Every effort moves you", tokenizer=tokenizer
     )

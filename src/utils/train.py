@@ -4,7 +4,7 @@ from src.utils.convert import text_to_tokenIds, tokenIds_to_text
 from src.utils.loss_fn import batch_loss, loader_loss
 
 
-def train_model_simple(model, train_loader, validation_loader, 
+def train_model(model, train_loader, validation_loader, 
                         optimizer, device, num_epochs, evaluation_frequency, 
                         evaluation_steps, start_context, tokenizer):
     # Initialize lists to track losses and tokens seen
