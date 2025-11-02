@@ -3,6 +3,7 @@ import tiktoken
 import os
 import time
 from datetime import datetime
+from torch.optim import AdamW, Optimizer
 
 from src.data_preparation.gpt_dataset import create_dataloader
 from src.llm.config.loader import config_loader
@@ -56,6 +57,7 @@ if __name__ == '__main__':
         num_workers=TASKS,
     )
 
+    torch.manual_seed(123)
     validation_loader = create_dataloader(
         tokenizer,
         validation_data,
@@ -76,21 +78,10 @@ if __name__ == '__main__':
         print("Warning: The validation data is smaller than the context length. "
             "Adjust the context length or provide more data.")
 
-    model = GPTModel(gpt_config_163m)
-    model.eval()  # Set the model to evaluation mode to disable dropout
-    model.to(device)
-
-
-    torch.manual_seed(123)
-    with torch.no_grad():
-        train_loss = loader_loss(train_loader, model, device)
-        validation_loss = loader_loss(validation_loader, model, device)
-
-    print(f"Train Loss: {train_loss}")
-    print(f"Validation Loss: {validation_loss}")
-
+    model: GPTModel
+    optimizer: Optimizer
+    
     start_time = time.time()
-    optimizer = torch.optim.AdamW(model.parameters(), lr=0.0004, weight_decay=0.1)
 
     # Load the model if it exists, otherwise initialize a new model
     if os.path.exists(model_save_path):
@@ -101,6 +92,8 @@ if __name__ == '__main__':
         model.load_state_dict(checkpoint['model_state_dict'])
         model.to(device)
         model.eval()
+
+        optimizer = AdamW(model.parameters(), lr=0.0004, weight_decay=0.1)
         optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
         model.train()
 
@@ -111,6 +104,15 @@ if __name__ == '__main__':
         torch.manual_seed(123)
         model = GPTModel(gpt_config_163m)
         model.to(device)
+
+        optimizer = AdamW(model.parameters(), lr=0.0004, weight_decay=0.1)
+
+    with torch.no_grad():
+        train_loss = loader_loss(train_loader, model, device)
+        validation_loss = loader_loss(validation_loader, model, device)
+
+    print(f"Origin train Loss: {train_loss}")
+    print(f"Origin validation Loss: {validation_loss}")
 
     num_epochs = 10
 

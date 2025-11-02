@@ -38,11 +38,12 @@ def train_model(model, train_loader, validation_loader,
                 validation_losses.append(validation_loss)
                 track_tokens_seen.append(tokens_seen)
                 
-                print(f"Epoch [{epoch+1}/{num_epochs}], Step [{global_step}], "
-                    f"Train Loss: {train_loss:.4f}, Validation Loss: {validation_loss:.4f}, "
+                print(f"Epoch [{epoch+1}/{num_epochs}], Step [{global_step:03d}], "
+                    f"Train Loss: {train_loss:.3f}, Validation Loss: {validation_loss:.3f}, "
                     f"Tokens Seen: {tokens_seen}")
 
         generate_and_print_sample(model, tokenizer, device, start_context)
+        
     return train_losses, validation_losses, track_tokens_seen
         
         
@@ -65,7 +66,7 @@ def generate_and_print_sample(model, tokenizer, device, start_context):
     encoded = text_to_tokenIds(start_context, tokenizer).to(device)
     
     with torch.no_grad():
-        torch.manual_seed(123)
+        #torch.manual_seed(123)
         token_ids = generate_text(model=model, idx=encoded, max_new_tokens=50, context_size=context_size, top_k=25, temperature=1.4)
         
     decoded_text = tokenIds_to_text(token_ids, tokenizer) 
