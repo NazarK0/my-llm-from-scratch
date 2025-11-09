@@ -9,10 +9,10 @@ from src.llm.transformer_block import TransformerBlock
 class GPTModel(nn.Module):
     def __init__(self, config):
         super(GPTModel, self).__init__()
-        self.token_embedding = nn.Embedding(
+        self.token_embeddings = nn.Embedding(
             config["vocabulary_size"], config["embedding_dimension"]
         )
-        self.position_embedding = nn.Embedding(
+        self.position_embeddings = nn.Embedding(
             config["context_length"], config["embedding_dimension"]
         )
         self.dropout = nn.Dropout(config["dropout_rate"])
@@ -32,9 +32,9 @@ class GPTModel(nn.Module):
         _, sequence_length = input_tokens.shape
 
         # Token and position embeddings
-        token_embeddings = self.token_embedding(input_tokens)
+        token_embeddings = self.token_embeddings(input_tokens)
         position_indices = torch.arange(sequence_length, device=input_tokens.device)
-        position_embeddings = self.position_embedding(position_indices)
+        position_embeddings = self.position_embeddings(position_indices)
 
         # Combine embeddings and apply dropout
         # token_embeddings + position_embeddings = input_embeddings
@@ -48,4 +48,3 @@ class GPTModel(nn.Module):
         logits = self.out_head(x)
 
         return logits
-    

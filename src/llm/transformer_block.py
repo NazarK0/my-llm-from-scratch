@@ -5,16 +5,6 @@ from src.llm.feed_forward_network import FeedForwardNetwork
 from src.llm.layer_normalization import LayerNormalization
 
 
-GPT_CONFIG_124M = {
-    "vocabulary_size": 50257,
-    "context_length": 1024,
-    "embedding_dimension": 768,
-    "number_of_layers": 12,
-    "number_of_heads": 12,
-    "dropout_rate": 0.1,
-    "qkv_bias": False,
-}
-
 class TransformerBlock(nn.Module):
     def __init__(self, config):
         super(TransformerBlock, self).__init__()

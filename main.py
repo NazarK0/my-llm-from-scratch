@@ -1,17 +1,14 @@
 import torch
 import tiktoken
 import os
-import time
-from datetime import datetime
-from torch.optim import AdamW, Optimizer
 
-from src.data_preparation.gpt_dataset import create_dataloader
+from src.generate_text import generate_text
 from src.llm.config.loader import config_loader
 from src.llm.gpt_model import GPTModel
+from src.utils.convert import text_to_tokenIds, tokenIds_to_text
+from src.utils.load_pgt2_weights.load_weights_into_model import load_weights_into_model
+from src.utils.load_pgt2_weights.gpt_weights_loader import load_gpt_weights
 from src.utils.host import get_cpu_cores, get_device
-from src.utils.loss_fn import loader_loss
-from src.utils.train import train_model
-
 
 tokenizer = tiktoken.get_encoding("gpt2")
 gpt_config_163m = config_loader("src/llm/config/gpt_163m.json")
@@ -19,10 +16,6 @@ file_path = os.path.join("data", "the-verdict.txt")
 
 
 if __name__ == '__main__':
-    # If not exists, create directory for saving the model weights and optimizer state
-    model_save_path = os.path.join("model", f"gpt_163m-{datetime.now().strftime("%d.%m.%Y")}.pth")
-    os.makedirs(os.path.dirname(model_save_path), exist_ok=True)
-
     device = get_device()
     TASKS: int = 0
 
@@ -31,102 +24,42 @@ if __name__ == '__main__':
         tasks_per_core = 1
         TASKS = cores * tasks_per_core
         print(f"Using {cores} CPU cores for DataLoader and {tasks_per_core} tasks per core")
-
-    # Read data
-    with open(file_path, "r", encoding="utf-8") as file:
-        text = file.read()
-
-    total_tokens = len(tokenizer.encode(text))
-    print("First 50 characters of the text:", text[:50])
-    print("Total characters:", len(text))
-    print("Total tokens in the text:", total_tokens)
-
-    train_ratio = 0.9
-    split_idx = int(train_ratio * len(text))
-    train_data = text[:split_idx]
-    validation_data = text[split_idx:]
-
-    torch.manual_seed(123)
-    train_loader = create_dataloader(
-        tokenizer,
-        train_data,
-        batch_size=2,
-        max_length=gpt_config_163m["context_length"],
-        stride=gpt_config_163m["context_length"],
-        shuffle=False,
-        num_workers=TASKS,
-    )
-
-    torch.manual_seed(123)
-    validation_loader = create_dataloader(
-        tokenizer,
-        validation_data,
-        batch_size=2,
-        max_length=gpt_config_163m["context_length"],
-        stride=gpt_config_163m["context_length"],
-        drop_last=False,
-        shuffle=False,
-        num_workers=TASKS,
-    )
-
-    # Sanity check: Decode the first batch of input_ids and target_ids
-    if total_tokens * train_ratio < gpt_config_163m["context_length"]:
-        print("Warning: The training data is smaller than the context length. "
-            "Adjust the context length or provide more data.")
-
-    if total_tokens * (1 - train_ratio) < gpt_config_163m["context_length"]:
-        print("Warning: The validation data is smaller than the context length. "
-            "Adjust the context length or provide more data.")
-
-    model: GPTModel
-    optimizer: Optimizer
+        
+    settings, params = load_gpt_weights(model_size="124M", models_dir="gpt2")
+    print("GPT-2 settings:", settings)
+    print("GPT-2 params keys:", params.keys())
     
-    start_time = time.time()
-
-    # Load the model if it exists, otherwise initialize a new model
-    if os.path.exists(model_save_path):
-        print("Loading the model...")
-
-        checkpoint = torch.load(model_save_path, map_location=device)
-        model = GPTModel(gpt_config_163m)
-        model.load_state_dict(checkpoint['model_state_dict'])
-        model.to(device)
-        model.eval()
-
-        optimizer = AdamW(model.parameters(), lr=0.0004, weight_decay=0.1)
-        optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
-        model.train()
-
-        print("Model loaded successfully.")
-    else:
-        print("No saved model found, proceeding to train a new model.")
-
-        torch.manual_seed(123)
-        model = GPTModel(gpt_config_163m)
-        model.to(device)
-
-        optimizer = AdamW(model.parameters(), lr=0.0004, weight_decay=0.1)
-
-    with torch.no_grad():
-        train_loss = loader_loss(train_loader, model, device)
-        validation_loss = loader_loss(validation_loader, model, device)
-
-    print(f"Origin train Loss: {train_loss}")
-    print(f"Origin validation Loss: {validation_loss}")
-
-    num_epochs = 10
-
-    train_losses, validation_losses, tokens_seen = train_model(
-        model, train_loader, validation_loader, optimizer, device, num_epochs,
-        evaluation_frequency=5, evaluation_steps=5, start_context="Every effort moves you", tokenizer=tokenizer
-    )
-
-    end_time = time.time()
-    exec_time_minutes = (end_time - start_time) / 60
-    print(f"Training completed in {exec_time_minutes:.2f} minutes")
-
-    print("Saving the model...")
-    torch.save({
-        'model_state_dict': model.state_dict(),
-        'optimizer_state_dict': optimizer.state_dict(),
-        }, model_save_path)
+    model_configs = {
+        "gpt2-small (124M)": {"embedding_dimension": 768, "number_of_layers": 12, "number_of_heads": 12},
+        "gpt2-medium (355M)": {"embedding_dimension": 1024, "number_of_layers": 24, "number_of_heads": 16},
+        "gpt2-large (774M)": {"embedding_dimension": 1280, "number_of_layers": 36, "number_of_heads": 20},
+        "gpt2-xl (1558M)": {"embedding_dimension": 1600, "number_of_layers": 48, "number_of_heads": 25},
+    }
+    
+    model_name = "gpt2-small (124M)"
+    new_config = gpt_config_163m.copy()
+    new_config.update(model_configs[model_name])
+    new_config.update({"context_length": 1024, "qkv_bias": True})
+    print("Model configuration:", new_config)
+    
+    gpt = GPTModel(new_config)
+    gpt.eval()
+    
+    load_weights_into_model(gpt, params)
+    gpt.to(device)
+    
+    idx = text_to_tokenIds("Every effort moves you", tokenizer).to(device)
+    
+    torch.manual_seed(123)
+    token_ids = generate_text(
+        model=gpt, 
+        idx= idx, 
+        max_new_tokens=25, 
+        context_size=new_config["context_length"], 
+        temperature=1.5, 
+        top_k=50
+        )
+    
+    generated_text = tokenIds_to_text(token_ids, tokenizer)
+    
+    print("Generated text:\n", generated_text)
